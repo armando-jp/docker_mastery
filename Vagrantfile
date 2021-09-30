@@ -66,6 +66,7 @@ Vagrant.configure("2") do |config|
   # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
   # documentation for more information about their specific syntax and use.
   config.vm.provision "shell", inline: <<-SHELL
+    sudo apt-get update
     sudo DEBIAN_FRONTEND=noninteractive apt-get update
     curl -fsSL https://get.docker.com -o get-docker.sh
     sudo sh get-docker.sh
@@ -76,6 +77,31 @@ Vagrant.configure("2") do |config|
     yes | sudo curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     sudo chmod +x /usr/local/bin/docker-compose
     sudo service docker start
+
+    #install microK8s
+    sudo snap install microk8s --classic
+    sudo echo 'alias kubectl="microk8s.kubectl"' >> ~/.bashrc
+    sudo usermod -a -G microk8s vagrant
+    sudo chown -f -R vagrant ~/.kube
+    newgrp microk8s
+    
+    # enable CoreDNS for resolving DNS names
+    microk8s.enable dns
+
+    # disable swap 
+    sudo swapoff -a
+
+    # allow pod-topod and pod-to-internet comms
+    sudo ufw allow in on cni0 && sudo ufw allow out on cni0
+    sudo ufw default allow routed
+
+    # # install kubeadm, kubelet, kubectl
+    # sudo apt-get install -y apt-transport-https ca-certificates curl
+    # sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    # echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    # sudo apt-get update
+    # sudo apt-get install -y kubelet kubeadm kubectl
+    # sudo apt-mark hold kubelet kubeadm kubectl
 
   SHELL
 
